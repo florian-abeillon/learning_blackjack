@@ -2,18 +2,20 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+
 def cmp(a, b):
     return float(a > b) - float(a < b)
+
 
 # 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
 deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
 
 
-def draw_card(np_random):
+def draw_card(np_random): # randomly draw a card
     return int(np_random.choice(deck))
 
 
-def draw_hand(np_random):
+def draw_hand(np_random): # randomly draw a hand (two cards)
     return [draw_card(np_random), draw_card(np_random)]
 
 
@@ -70,6 +72,7 @@ class BlackjackEnv(gym.Env):
     by Sutton and Barto.
     http://incompleteideas.net/book/the-book-2nd.html
     """
+
     def __init__(self, natural=False):
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Tuple((
@@ -110,8 +113,8 @@ class BlackjackEnv(gym.Env):
         return self._get_obs(), reward, done, {}
 
     def _get_obs(self):
-        #return (sum_hand(self.player), self.dealer[0], usable_ace(self.player))
-        #changed to have access to the cards in the hand (and to the actual probability)
+        # return (sum_hand(self.player), self.dealer[0], usable_ace(self.player))
+        # changed to have access to the cards in the hand (and to the actual probability)
         return (self.player, self.dealer[0], usable_ace(self.player))
 
     def reset(self):
