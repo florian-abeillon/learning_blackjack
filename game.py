@@ -16,7 +16,8 @@ def random_action():
 
 
 # semi-random action: winning score is 37% on average
-def semi_random_action(player_score, count_cards, nb_cards_out):
+def semi_random_action(player_hand, count_cards, nb_cards_out):
+    player_score = bj.sum_hand(player_hand)
     card_sup = 21 - player_score
     if card_sup >= 10:
         return 1
@@ -33,7 +34,8 @@ def semi_random_action(player_score, count_cards, nb_cards_out):
 
 # strategic action: winning score is 42% on average for sup=14
 def strategic_action(player_hand, sup=18):
-    if player_hand < sup:
+    player_total = bj.sum_hand(player_hand)
+    if player_total < sup:
         return 1
     return 0
 
@@ -123,15 +125,11 @@ def main(algo, sup=18, Verbose=False):
         # if we choose the 'semi-random' strategy
         if algo == 'semi-random':
             # for the first iteration, we need to sum the hand (it will be done in the loop later on)
-            if t == 0:
-                player_hand = bj.sum_hand(player_hand)
             action = semi_random_action(player_hand, count_cards, 3 + t)
 
         # if we choose the 'strategic' strategy
         if algo == 'strategic':
             # for the first iteration, we need to sum the hand (it will be done in the loop later on)
-            if t == 0:
-                player_hand = bj.sum_hand(player_hand)
             action = strategic_action(player_hand, sup)
 
         if algo == "basic strategy":
@@ -142,7 +140,7 @@ def main(algo, sup=18, Verbose=False):
 
         if Verbose:
             print("Pass {} - Player's score:".format(i_game + 1), player_hand)
-            if player_hand > 21:
+            if bj.sum_hand(player_hand) > 21:
                 print("Player has been busted.")
 
         if done:
