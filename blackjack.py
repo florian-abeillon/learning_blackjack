@@ -31,11 +31,12 @@ def is_natural(hand):  # Is this hand a natural blackjack?
     return sorted(hand) == [1, 10]
 
 
-def deck_init():
+def deck_init(nb_deck):
 
     # 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
     one_color_deck = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
     deck = np.tile(one_color_deck, 4)  # full start deck
+    deck = np.tile(deck, nb_deck)
     np.random.shuffle(deck)  # the dealer shuffles the cards
     return deck
 
@@ -72,7 +73,7 @@ class BlackjackEnv(gym.Env):
     http://incompleteideas.net/book/the-book-2nd.html
     """
 
-    def __init__(self, natural=False):
+    def __init__(self, natural=False, nb_deck=1):
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(32),
@@ -84,7 +85,7 @@ class BlackjackEnv(gym.Env):
         # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
 
-        self.deck = deck_init()
+        self.deck = deck_init(nb_deck)
 
         # Start the first game
         self.reset()

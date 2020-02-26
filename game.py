@@ -50,7 +50,8 @@ def main(algo='random', sup=18, Verbose=False):
         if Verbose:
             print("Pass 0 - Player's score:", bj.sum_hand(player_hand))
 
-        # in the official rules, there can only be a maximum of 2 passes, but we will not implement this rule (not relevant)
+        # in the official rules, there can only be a maximum of 2 passes, but we will not implement this rule
+        # (not relevant)
         # theoretically ,there cannot be more than 11 passes (4*aces, 4*two, 3*three)
         for t in range(11):
             # if we choose the 'random' strategy
@@ -71,7 +72,7 @@ def main(algo='random', sup=18, Verbose=False):
                 M = np.zeros(18, 18)
                 for i in range(4, 22):
                     for j in range(4, 22):
-                        M[i - 4, j - 4] = Proba(i, j, player_hand, dealer_first_card)
+                        M[i - 4, j - 4] = proba(i, j, player_hand, dealer_first_card)
                 v2 = np.zeros(18)
 
                 while delta < epsilon * (1 - gamma) / gamma:
