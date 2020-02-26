@@ -85,7 +85,8 @@ class BlackjackEnv(gym.Env):
         # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
 
-        self.deck = deck_init(nb_deck)
+        self.nb_deck = nb_deck
+        self.deck = deck_init(self.nb_deck)
 
         # Start the first game
         self.reset()
@@ -128,7 +129,7 @@ class BlackjackEnv(gym.Env):
 
         # Check if deck is empty => new shuffled deck
         if len(self.deck) == 0:
-            self.deck = deck_init()
+            self.deck = deck_init(self.nb_deck)
 
         card = self.deck[0]  # get the first card
         self.deck = np.delete(self.deck, 0)

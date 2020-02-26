@@ -4,11 +4,11 @@ import matplotlib.pyplot as plt
 import gym
 import blackjack as bj  # no joke
 
-env = bj.BlackjackEnv()
+
+env = bj.BlackjackEnv(nb_deck=1)
 gamma = 0.8
 epsilon = 0.01
 Verbose = False
-algo = ['random', 'deterministic', 'value_iteration']
 
 
 # random action: winning score is 28% on average
@@ -18,7 +18,8 @@ def random_action():
 
 # deterministic action: winning score is 42% on average for sup=14
 def deterministic_action(player_hand, sup=18):
-    if player_hand < sup:
+    player_total = bj.sum_hand(player_hand)
+    if player_total < sup:
         return 1
     return 0
 
@@ -38,8 +39,48 @@ def proba(start, end, player=np.array([]), dealer=-1):
     return count / size_deck
 
 
+def basic_strategy(player_hand, dealer_value, soft):
+    """ This is a simple implementation of Blackjack's
+        basic strategy. It is used to recommend actions
+        for the player. """
+
+    player_total = bj.sum_hand(player_hand)
+
+    if 4 <= player_total <= 11:
+        return 1
+
+    elif soft:
+        # we only double soft 12 because there's no splitting
+        if 12 <= player_total <= 18:
+            return 1
+        if player_total == 18:
+            if dealer_value in [2, 7, 8]:
+                return 0
+            else:
+                return 1
+        if player_total >= 19:
+            return 0
+
+    else:
+        if player_total == 12:
+
+            if dealer_value in [1, 2, 3, 7, 8, 9, 10]:
+                return 1
+            else:
+                return 0
+
+        if 13 <= player_total <= 16:
+            if 2 <= dealer_value <= 6:
+                return 0
+            else:
+                return 1
+
+        if player_total >= 17:
+            return 0
+
+
 # sup is the maximum hand score in the deterministic action
-def main(algo='random', sup=18, Verbose=False):
+def main(algo='basic strategy', sup=18, Verbose=False):
     avg_win = 0
     nb_games = 10000
 
@@ -61,9 +102,10 @@ def main(algo='random', sup=18, Verbose=False):
                 # if we choose the 'deterministic' strategy
             if algo == 'deterministic':
                 # for the first iteration, we need to sum the hand (it will be done in the loop later on)
-                if t == 0:
-                    player_hand = bj.sum_hand(player_hand)
                 action = deterministic_action(player_hand, sup)
+
+            if algo == "basic strategy":
+                action = basic_strategy(player_hand, dealer_first_card, usable_ace)
 
             '''
             #if we choose the 'value iteration' strategy
@@ -95,7 +137,7 @@ def main(algo='random', sup=18, Verbose=False):
 
             observation, reward, done, info = env.step(action)
             player_hand, dealer_first_card, usable_ace = observation
-            player_hand = bj.sum_hand(player_hand)
+            #player_hand = bj.sum_hand(player_hand)
             if Verbose:
                 print("Pass {} - Player's score:".format(i_game + 1), player_hand)
                 if player_hand > 21:
@@ -121,11 +163,6 @@ def main(algo='random', sup=18, Verbose=False):
                         print()
                 break
 
-    if Verbose:
-        print("Average winning score with", algo, "action:", avg_win / nb_games, "%")
-        if algo == 'deterministic':
-            print("( sup =", sup, ")")
-
     env.close()
 
     # percentage of winning games
@@ -134,7 +171,10 @@ def main(algo='random', sup=18, Verbose=False):
 
 # TEST
 # Random action
-print("Average winning score with random action:", main(), "%")
+print("Average winning score with random action:", main(algo='random'), "%")
+
+#basic strategy action
+print("Average winning score with basic strategy action:", main(algo='basic strategy'), "%")
 
 # TEST
 # Deterministic action
@@ -142,7 +182,7 @@ x = np.arange(22)
 y = []
 for i in x:
     # We try for every maximum hand score
-    y.append(main(algo[1], sup=i))
+    y.append(main(algo='deterministic', sup=i))
 y = np.array(y)
 best_i = np.argmax(y)
 print("Best winning score of", y[best_i], "was obtained with maximum hand score of", best_i)
