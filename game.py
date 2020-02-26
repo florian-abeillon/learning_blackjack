@@ -1,22 +1,20 @@
 import numpy as np
-import matplotlib
 import matplotlib.pyplot as plt
-import gym
-import blackjack as bj  # no joke
+import blackjackReplacement as bjr
+import blackjack as bj
 
-env = bj.BlackjackEnv(nb_deck=1)
+nb_deck = 1
 gamma = 0.8
 epsilon = 0.01
-Verbose = False
 
 
 # random action: winning score is 28% on average
-def random_action():
-    return env.action_space.sample()
+def random_strategy():
+    return np.random.randint(2)
 
 
 # semi-random action: winning score is 37% on average
-def semi_random_action(player_hand, count_cards, nb_cards_out):
+def semi_random_strategy(player_hand, count_cards, nb_cards_out):
     player_score = bj.sum_hand(player_hand)
     card_sup = 21 - player_score
     if card_sup >= 10:
@@ -95,108 +93,155 @@ def basic_strategy(player_hand, dealer_value, soft):
             return 0
 
 
+def action(algo, player_hand, count_cards, sup, dealer_first_card, usable_ace, t):
+    # if we choose the 'random' strategy
+    if algo == 'random':
+        return random_strategy()
+
+    # if we choose the 'semi-random' strategy
+    elif algo == 'semi-random':
+        # for the first iteration, we need to sum the hand (it will be done in the loop later on)
+        return semi_random_strategy(player_hand, count_cards, 3 + t)
+
+    # if we choose the 'strategic' strategy
+    elif algo == 'strategic':
+        return strategic_action(player_hand, sup)
+
+    elif algo == "basic strategy":
+        return basic_strategy(player_hand, dealer_first_card, usable_ace)
+
+
 # sup is the maximum hand score in the deterministic action
-def main(algo, sup=18, Verbose=False):
-    avg_win = 0
-    avg_tie = 0
+def main(algo, Verbose=False, sup=18):
+    win = 0
+    tie = 0
+    loss = 0
     nb_games = 10000
+
+    # initialization of the game
+
 
     # for loop to run nb_games blackjack games
     for i_game in range(nb_games):
-        count_cards = np.zeros(10)  # we make no difference between 10/J/Q/K
-        player_hand, dealer_first_card, usable_ace = env.reset()
+
+        player_hand, dealer_first_card, usable_ace = env.new_game()
+
+        # Counting cards
+        # (we make no difference between 10/J/Q/K)
+        count_cards = np.zeros(10)
+
+        if sum(count_cards >= 52 * nb_deck): # Reset when every card has been played
+            count_cards = np.zeros(10)
+
         for card in player_hand:
             count_cards[card - 1] -= 1
         count_cards[dealer_first_card - 1] -= 1
 
-        reward = 0.
+        # in the official rules, there can only be a maximum of 2 passes, but we will not implement this rule
+        # (not relevant)
+        # theoretically ,there cannot be more than 11 passes (4*aces, 4*two, 3*three)
+        for t in range(11):
 
-    if Verbose:
-        print("Pass 0 - Player's score:", bj.sum_hand(player_hand))
+            act = action(algo, player_hand, count_cards, sup, dealer_first_card, usable_ace, t)
 
-    # in the official rules, there can only be a maximum of 2 passes, but we will not implement this rule
-    # (not relevant)
-    # theoretically ,there cannot be more than 11 passes (4*aces, 4*two, 3*three)
-    for t in range(11):
-        # if we choose the 'random' strategy
-        if algo == 'random':
-            action = random_action()
+            observation, reward, done, info = env.step(act)
+            player_hand, dealer_first_card, usable_ace = observation
 
-        # if we choose the 'semi-random' strategy
-        if algo == 'semi-random':
-            # for the first iteration, we need to sum the hand (it will be done in the loop later on)
-            action = semi_random_action(player_hand, count_cards, 3 + t)
+            if done:
+                # if the player won the game
+                if reward >= 1:
+                    win += 1
 
-        # if we choose the 'strategic' strategy
-        if algo == 'strategic':
-            # for the first iteration, we need to sum the hand (it will be done in the loop later on)
-            action = strategic_action(player_hand, sup)
+                elif reward == 0:
+                    tie += 1
 
-        if algo == "basic strategy":
-            action = basic_strategy(player_hand, dealer_first_card, usable_ace)
+                elif reward == -1:
+                    loss += 1
 
-        observation, reward, done, info = env.step(action)
-        player_hand, dealer_first_card, usable_ace = observation
-
-        if Verbose:
-            print("Pass {} - Player's score:".format(i_game + 1), player_hand)
-            if bj.sum_hand(player_hand) > 21:
-                print("Player has been busted.")
-
-        if done:
-            if Verbose:
-                dealer_hand = bj.score(env.dealer)
-                print("Dealer's score:", dealer_hand)
-                if dealer_hand > 21:
-                    print("Dealer has been busted.")
-
-            # if the player won the game
-            if reward == 1.:
-                avg_win += 1
-                if Verbose:
-                    print("GAME WON")
-                    print()
-            # if the player lost the game
-            else:
-                if Verbose:
-                    print("GAME LOST")
-                    print()
-            break
+                break
 
     env.close()
 
     # percentage of winning games
-    return 100 * avg_win / nb_games, 100 * avg_tie / nb_games
+    return 100 * win / nb_games, 100 * tie / nb_games, 100 * loss/nb_games
 
 
 # TEST
 
 # basic strategy action
-print("Average winning score with basic strategy action:", main(algo='basic strategy'), "%")
+print("WITH REPLACEMENT")
+env = bjr.BlackjackEnv(nb_deck)
+results = main(algo='basic strategy')
+print("Results with basic strategy action:")
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("WITHOUT REPLACEMENT")
+env = bj.BlackjackEnv(nb_deck)
+results = main(algo='basic strategy')
+print("Results with basic strategy action:")
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
 
 # Random action
-random_algo = main(algo='random')
-print("Average winning score with random action:", random_algo[0], "%")
-print("Ties:", random_algo[1], "%  ||  Losses:", 100 - (random_algo[0] + random_algo[1]), "%")
+print("WITH REPLACEMENT")
+env = bjr.BlackjackEnv(nb_deck)
+results = main(algo='random')
+print("Results with random action:",)
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("WITHOUT REPLACEMENT")
+env = bj.BlackjackEnv(nb_deck)
+results = main(algo='random')
+print("Results with random action:",)
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
 
 # Semi-random action
-semi_random_algo = main(algo='semi-random')
-print("Average winning score with semi-random action:", semi_random_algo[0], "%")
-print("Ties:", semi_random_algo[1], "%  ||  Losses:", 100 - (semi_random_algo[0] + semi_random_algo[1]), "%")
+print("WITH REPLACEMENT")
+env = bjr.BlackjackEnv(nb_deck)
+results = main(algo='semi-random')
+print("Results with semi-random action:",)
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("WITHOUT REPLACEMENT")
+env = bj.BlackjackEnv(nb_deck)
+results = main(algo='semi-random')
+print("Results with semi-random action:",)
+print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+
 
 # TEST
 # Strategic action
+print("WITH REPLACEMENT")
+env = bjr.BlackjackEnv(nb_deck)
 x = np.arange(22)
 y = []
 for i in x:
     # We try for every maximum hand score
     y.append(main('strategic', sup=i))
 y = np.array(y)
-print(y)
-print(y[:, 0])
+#print(y)
+#print(y[:, 0])
 best_i = np.argmax(y, axis=0)[0]
 print("Best winning score of", y[best_i][0], "% was obtained with maximum hand score of", best_i)
-print("Ties:", y[best_i][1], "%  ||  Losses:", 100 - (y[best_i][0] + y[best_i][1]), "%")
+print("Wins:", y[best_i][0], "% || Ties:", y[best_i][1], "%  ||  Losses:", y[best_i][2], "%")
+
+# And we plot the results
+plt.plot(x, y[:, 0])
+plt.ylim((0, 100))
+plt.xlabel("Maximum hand score before quitting", fontsize=16)
+plt.ylabel("Average winning score", fontsize=16)
+plt.show()
+
+print("WITHOUT REPLACEMENT")
+env = bj.BlackjackEnv(nb_deck)
+x = np.arange(22)
+y = []
+for i in x:
+    # We try for every maximum hand score
+    y.append(main('strategic', sup=i))
+y = np.array(y)
+#print(y)
+#print(y[:, 0])
+best_i = np.argmax(y, axis=0)[0]
+print("Best winning score of", y[best_i][0], "% was obtained with maximum hand score of", best_i)
+print("Wins:", y[best_i][0], "% || Ties:", y[best_i][1], "%  ||  Losses:", y[best_i][2], "%")
+
 # And we plot the results
 plt.plot(x, y[:, 0])
 plt.ylim((0, 100))
