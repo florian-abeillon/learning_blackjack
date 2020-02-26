@@ -2,19 +2,11 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+import numpy as np
+
+
 def cmp(a, b):
     return float(a > b) - float(a < b)
-
-# 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
-deck = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10]
-
-
-def draw_card(np_random):
-    return int(np_random.choice(deck))
-
-
-def draw_hand(np_random):
-    return [draw_card(np_random), draw_card(np_random)]
 
 
 def usable_ace(hand):  # Does this hand have a usable ace?
@@ -37,6 +29,16 @@ def score(hand):  # What is the score of this hand (0 if bust)
 
 def is_natural(hand):  # Is this hand a natural blackjack?
     return sorted(hand) == [1, 10]
+
+
+def deck_init(nb_deck):
+
+    # 1 = Ace, 2-10 = Number cards, Jack/Queen/King = 10
+    one_color_deck = np.array([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 10, 10, 10])
+    deck = np.tile(one_color_deck, 4)  # full start deck
+    deck = np.tile(deck, nb_deck)
+    np.random.shuffle(deck)  # the dealer shuffles the cards
+    return deck
 
 
 class BlackjackEnv(gym.Env):
@@ -70,7 +72,8 @@ class BlackjackEnv(gym.Env):
     by Sutton and Barto.
     http://incompleteideas.net/book/the-book-2nd.html
     """
-    def __init__(self, natural=False):
+
+    def __init__(self, natural=False, nb_deck=1):
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(32),
@@ -81,17 +84,25 @@ class BlackjackEnv(gym.Env):
         # Flag to payout 1.5 on a "natural" blackjack win, like casino rules
         # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
+
+        self.nb_deck = nb_deck
+        self.deck = deck_init(self.nb_deck)
+
         # Start the first game
         self.reset()
 
-    def seed(self, seed=None):
-        self.np_random, seed = seeding.np_random(seed)
-        return [seed]
+    def reset(self):
+
+        self.dealer = self.draw_hand()
+        self.player = self.draw_hand()
+
+        return self._get_obs()
 
     def step(self, action):
+
         assert self.action_space.contains(action)
         if action:  # hit: add a card to players hand and return
-            self.player.append(draw_card(self.np_random))
+            self.player.append(self.draw_card())
             if is_bust(self.player):
                 done = True
                 reward = -1
@@ -101,7 +112,7 @@ class BlackjackEnv(gym.Env):
         else:  # stick: play out the dealers hand, and score
             done = True
             while sum_hand(self.dealer) < 17:
-                self.dealer.append(draw_card(self.np_random))
+                self.dealer.append(self.draw_card())
 
             reward = cmp(score(self.player), score(self.dealer))
 
@@ -110,11 +121,19 @@ class BlackjackEnv(gym.Env):
         return self._get_obs(), reward, done, {}
 
     def _get_obs(self):
-        #return (sum_hand(self.player), self.dealer[0], usable_ace(self.player))
-        #changed to have access to the cards in the hand (and to the actual probability)
-        return (self.player, self.dealer[0], usable_ace(self.player))
+        # return (sum_hand(self.player), self.dealer[0], usable_ace(self.player))
+        # changed to have access to the cards in the hand (and to the actual probability)
+        return self.player, self.dealer[0], usable_ace(self.player)
 
-    def reset(self):
-        self.dealer = draw_hand(self.np_random)
-        self.player = draw_hand(self.np_random)
-        return self._get_obs()
+    def draw_card(self):  # randomly draw a card
+
+        # Check if deck is empty => new shuffled deck
+        if len(self.deck) == 0:
+            self.deck = deck_init(self.nb_deck)
+
+        card = self.deck[0]  # get the first card
+        self.deck = np.delete(self.deck, 0)
+        return int(card)
+
+    def draw_hand(self):  # randomly draw a hand (two cards)
+        return [self.draw_card(), self.draw_card()]
