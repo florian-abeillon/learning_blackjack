@@ -116,7 +116,7 @@ def main(algo, Verbose=False, sup=18):
     win = 0
     tie = 0
     loss = 0
-    nb_games = 10000
+    nb_games = 999999
 
     # initialization of the game
 
