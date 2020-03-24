@@ -17,15 +17,15 @@ BATCH_SIZE = 256
 BUFFER_SIZE = 20000
 
 ''' Environment parameters'''
-COUNT_CARDS = False
+COUNT_CARDS = True
 if COUNT_CARDS:
     STATE_SIZE = 4
 else:
     STATE_SIZE = 3
 ACTION_SIZE = 2
 
-NB_EPOCH = 10
-NB_TRAIN_GAMES = 10000
+NB_EPOCH = 20
+NB_TRAIN_GAMES = 1000
 NB_EVAL_GAMES = 1000
 
 
@@ -33,12 +33,6 @@ class QNeuralNetwork(nn.Module):
 
     def __init__(self):
         super(QNeuralNetwork, self).__init__()
-
-        '''
-        self.l1 = nn.Linear(in_features=state_size, out_features=250)
-        self.l2 = nn.Linear(in_features=250, out_features=250)
-        self.l3 = nn.Linear(in_features=250, out_features=action_size)
-        '''
 
         self.l1 = nn.Linear(in_features=STATE_SIZE, out_features=39)
         self.b1 = nn.BatchNorm1d(num_features=39)
@@ -119,6 +113,7 @@ def choose_action(state):
         DQN.eval()
         output = DQN(state)
         action = torch.argmax(output).item()
+
     return action
 
 
@@ -169,7 +164,7 @@ def training():
 
             init_state = next_state
 
-            optimize_model(replay_buffer)
+        optimize_model(replay_buffer)
 
     env.close()
 
@@ -187,13 +182,11 @@ def test():
         init_state = env.new_game()
         action = torch.argmax(DQN(init_state)).item()
         next_state, reward, done, _ = env.step(action)
-        next_state = next_state
         init_state = next_state
 
         while not done:
             action = torch.argmax(DQN(init_state)).item()
             next_state, reward, done, _ = env.step(action)
-            next_state = next_state
             init_state = next_state
 
         if reward >= 1:
@@ -207,7 +200,7 @@ def test():
     print("Wins: {:.2%} || Ties: {:.2%} || Losses: {:.2%} ".format(nb_victories / NB_EVAL_GAMES,
                                                                    nb_ties / NB_EVAL_GAMES,
                                                                    nb_losses / NB_EVAL_GAMES))
-    print("Expected value:", (nb_victories - nb_losses) / NB_EVAL_GAMES)
+    print("Expected value:", nb_victories - nb_losses)
 
 
 def print_q_table():
@@ -261,4 +254,5 @@ for epoch in range(1, NB_EPOCH + 1):
     test()
     print(" ")
 
-print_q_table()
+if not COUNT_CARDS:
+    print_q_table()

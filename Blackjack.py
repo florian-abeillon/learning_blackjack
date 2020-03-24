@@ -49,7 +49,7 @@ def reward(player_hand, dealer_hand, natural):  # returns the reward value
     elif player_score == dealer_score:  # tie
         return 0
 
-    elif player_score < dealer_score:
+    elif player_score < dealer_score:  # loss
         return -1
 
 
@@ -85,17 +85,19 @@ class BlackjackEnv(gym.Env):
     http://incompleteideas.net/book/the-book-2nd.html
     """
 
-    def __init__(self, natural=False, nb_deck=1):
+    def __init__(self, natural=False, nb_deck=1, count_cards=False):
         self.action_space = spaces.Discrete(2)
         self.observation_space = spaces.Tuple((
             spaces.Discrete(32),
             spaces.Discrete(11),
             spaces.Discrete(2)))
         self.seed()
+        self.deck_value = 0
 
         # Flag to payout 1.5 on a "natural" blackjack win, like casino rules
         # Ref: http://www.bicyclecards.com/how-to-play/blackjack/
         self.natural = natural
+        self.count_cards = count_cards
 
         self.nb_deck = nb_deck
         self.deck = deck_init(self.nb_deck)
@@ -127,42 +129,30 @@ class BlackjackEnv(gym.Env):
         return self.get_obs(), rwd, done, {}
 
     def get_obs(self):
-        return self.player, self.dealer[0], usable_ace(self.player)
+        if self.count_cards:
+            return sum_hand(self.player), self.dealer[0], usable_ace(self.player), self.deck_value
+        else:
+            return sum_hand(self.player), self.dealer[0], usable_ace(self.player)
 
     def draw_card(self):  # randomly draw a card
 
         # Check if deck is empty => new shuffled deck
         if len(self.deck) == 0:
             self.deck = deck_init(self.nb_deck)
+            self.deck_value = 0
 
         card = self.deck[0]  # get the first card
         self.deck = self.deck[1:]
+        
+        if (card in [1,10]) :
+            self.deck_value -= 1
+        elif (card in [7,8,9]) :
+            self.deck_value += 1
+        
         return int(card)
 
     def draw_hand(self):  # randomly draw a hand (two cards)
         return [self.draw_card(), self.draw_card()]
 
-
-'''
-    def step(self, action):
-
-        assert self.action_space.contains(action)
-
-        if action:  # hit: add a card to players hand and return
-            self.player.append(self.draw_card())
-            if is_bust(self.player):
-                done = True
-                rew = -1
-            else:
-                done = False
-                rew = 0
-
-        else:  # stick: play out the dealers hand, and score
-            done = True
-            while sum_hand(self.dealer) < 17:
-                self.dealer.append(self.draw_card())
-
-            rew = reward(self.player, self.dealer, self.natural)
-
-        return self.get_obs(), rew, done, {}
-'''
+    def get_deck_value(self) :
+        return self.deck_value / ( (len(self.deck) // 52) + 1 )
