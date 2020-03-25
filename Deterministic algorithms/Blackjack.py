@@ -130,9 +130,9 @@ class BlackjackEnv(gym.Env):
 
     def get_obs(self):
         if self.count_cards:
-            return sum_hand(self.player), self.dealer[0], usable_ace(self.player), self.deck_value
+            return self.player, self.dealer[0], usable_ace(self.player), self.deck_value
         else:
-            return sum_hand(self.player), self.dealer[0], usable_ace(self.player)
+            return self.player, self.dealer[0], usable_ace(self.player)
 
     def draw_card(self):  # randomly draw a card
 
