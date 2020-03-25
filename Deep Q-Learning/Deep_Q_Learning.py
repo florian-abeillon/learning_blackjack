@@ -32,7 +32,7 @@ ACTION_SIZE = 2
 
 NB_EPOCH = 20
 NB_TRAIN_GAMES = 1000
-NB_EVAL_GAMES = 1000
+NB_EVAL_GAMES = 100000
 
 
 class QNeuralNetwork(nn.Module):
@@ -204,8 +204,8 @@ def test():
     print("Wins: {:.2%} || Ties: {:.2%} || Losses: {:.2%} ".format(nb_victories / NB_EVAL_GAMES,
                                                                    nb_ties / NB_EVAL_GAMES,
                                                                    nb_losses / NB_EVAL_GAMES))
-    print("Expected value:", (nb_victories - nb_losses) * 100 / NB_EVAL_GAMES)
-    return (nb_victories - nb_losses) * 100 / NB_EVAL_GAMES
+    print("Expected value:", (nb_victories - nb_losses) / NB_EVAL_GAMES)
+    return (nb_victories - nb_losses) / NB_EVAL_GAMES
 
 
 def print_q_table():
