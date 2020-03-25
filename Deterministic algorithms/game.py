@@ -162,7 +162,7 @@ def main(algo, Verbose=False, sup=18):
     env.close()
 
     # percentage of winning games
-    return 100 * win / nb_games, 100 * tie / nb_games, 100 * loss/nb_games
+    return 100 * win / nb_games, 100 * tie / nb_games, 100 * loss/nb_games, (win - loss) / nb_games
 
 
 # TEST
@@ -172,18 +172,21 @@ env = bj.BlackjackEnv(nb_deck)
 results = main(algo='basic strategy')
 print("Results with basic strategy action:")
 print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("Expected value:", results[3])
 
 # Random action
 env = bj.BlackjackEnv(nb_deck)
 results = main(algo='random')
 print("Results with random action:",)
 print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("Expected value:", results[3])
 
 # Semi-random action
 env = bj.BlackjackEnv(nb_deck)
 results = main(algo='semi-random')
 print("Results with semi-random action:",)
 print("Wins:", results[0], "% || Ties:", results[1], "%  ||  Losses:", results[2], "%")
+print("Expected value:", results[3])
 
 
 # TEST
@@ -200,6 +203,7 @@ y = np.array(y)
 best_i = np.argmax(y, axis=0)[0]
 print("Best winning score of", y[best_i][0], "% was obtained with maximum hand score of", best_i)
 print("Wins:", y[best_i][0], "% || Ties:", y[best_i][1], "%  ||  Losses:", y[best_i][2], "%")
+print("Expected value:", y[best_i][3])
 
 # And we plot the results
 plt.plot(x, y[:, 0])
