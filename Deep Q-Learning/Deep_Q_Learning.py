@@ -1,12 +1,18 @@
 import random
 
 import Blackjack_DQL as bj
+
 import numpy as np
+
+import matplotlib.pyplot as plt
+
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
-from pandas import DataFrame
+
+from pandas import DataFrame, set_option
+set_option('display.max_columns', 30)
 
 ''' Learning parameters'''
 EPS = 0.1  # epsilon-greedy
@@ -17,7 +23,7 @@ BATCH_SIZE = 256
 BUFFER_SIZE = 20000
 
 ''' Environment parameters'''
-COUNT_CARDS = True
+COUNT_CARDS = False
 if COUNT_CARDS:
     STATE_SIZE = 4
 else:
@@ -49,12 +55,10 @@ class QNeuralNetwork(nn.Module):
 
         x = self.l1(x)
         x = self.b1(x)
-        # x = F.dropout(x)
         x = F.relu(x)
 
         x = self.l2(x)
         x = self.b2(x)
-        # x = F.dropout(x)
         x = F.relu(x)
 
         x = self.l3(x)
@@ -200,7 +204,8 @@ def test():
     print("Wins: {:.2%} || Ties: {:.2%} || Losses: {:.2%} ".format(nb_victories / NB_EVAL_GAMES,
                                                                    nb_ties / NB_EVAL_GAMES,
                                                                    nb_losses / NB_EVAL_GAMES))
-    print("Expected value:", nb_victories - nb_losses)
+    print("Expected value:", (nb_victories - nb_losses) * 100 / NB_EVAL_GAMES)
+    return (nb_victories - nb_losses) * 100 / NB_EVAL_GAMES
 
 
 def print_q_table():
@@ -221,7 +226,7 @@ def print_q_table():
             pair = []
 
             ''' Soft ace '''
-            state = torch.tensor([player_hand] + [dealer_hand] + [0]).float()
+            state = [player_hand] + [dealer_hand] + [0]
             output = DQN(state)
             action = torch.argmax(output).item()
             if action == 1:
@@ -230,7 +235,7 @@ def print_q_table():
                 pair.append("STAND")
 
             ''' Hard ace '''
-            state = torch.tensor([player_hand] + [dealer_hand] + [1]).float()
+            state = [player_hand] + [dealer_hand] + [1]
             output = DQN(state)
             action = torch.argmax(output).item()
             if action == 1:
@@ -248,11 +253,24 @@ def print_q_table():
 
 
 ''' Training '''
+learning_curve = np.zeros(NB_EPOCH)
+epochs = np.arange(1, NB_EPOCH + 1)
+
 for epoch in range(1, NB_EPOCH + 1):
     print("Epoch", epoch, ":")
     training()
-    test()
+    learning_curve[epoch - 1] = test()
     print(" ")
 
-if not COUNT_CARDS:
-    print_q_table()
+    if not COUNT_CARDS:
+        print_q_table()
+
+# Print the learning curve
+plt.plot(epochs, learning_curve)
+plt.xlabel("Epochs (1 epoch = 1000 games)")
+plt.ylabel("Expected value")
+plt.title("Expected value through epochs")
+plt.show()
+
+
+
